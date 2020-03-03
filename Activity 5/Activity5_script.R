@@ -180,11 +180,10 @@ obs2017 <- datD[datD$year == '2017',]
 ave2017 <- aggregate(obs2017$discharge, by=list(obs2017$doy), FUN="mean")
 colnames(ave2017) <- c("doy","dailyAve")
 
-
 par(mai=c(1,1,1,1))
 plot(aveF$doy,aveF$dailyAve, 
      type="l", 
-     xlab="Month", 
+     xlab="Day of Year", 
      ylab=expression(paste("Discharge ft"^"3 ","sec"^"-1")),
      lwd=2,
      ylim=c(0,90),
@@ -198,14 +197,12 @@ polygon(c(aveF$doy, rev(aveF$doy)),#x coordinates
 )
 lines(ave2017$doy,ave2017$dailyAve,
       col="red")
-axis(1, seq(0,360, by=40), #tick intervals
-######################
-     lab=seq(0,11, by=1)) #tick labels
-######################
+axis(1, seq(0,360, by=31), #tick intervals
+     labels = c(1,32,60,91,121,152,182,213,244,274,305,335)) #tick labels
 axis(2, seq(0,80, by=20),
      seq(0,80, by=20),
      las = 2)#show ticks at 90 degree angle
-legend("topright", c("mean","1 standard deviation","2017"), #legend items
+legend(240,87, c("mean","1 standard deviation","2017 Observations"), #legend items
        lwd=c(2,NA),#lines
        col=c("black",rgb(0.392, 0.584, 0.929,.2),"red"),#colors
        pch=c(NA,15),#symbols
@@ -214,39 +211,192 @@ legend("topright", c("mean","1 standard deviation","2017"), #legend items
 ###### Question 7 ######
 
 agg <- aggregate(datP,
-          by = list(datP$doy,datP$year),
-          length)
+                 by = list(datP$doy,datP$year),
+                 length)
 full24 <- agg[agg$doy == "24",]
 # within 'full24', 'Group.1' is the DOYs for which there are 24 observations
 
 par(mai=c(1,1,1,1))
-plot(aveF$doy,aveF$dailyAve, 
+plot(datD$decYear,datD$discharge, 
      type="l", 
-     xlab="Day of Year", 
+     xlab="Decimal Year", 
      ylab=expression(paste("Discharge ft"^"3 ","sec"^"-1")),
      lwd=2,
-     ylim=c(0,90),
+     ylim=c(0,425),
      xaxs="i", yaxs ="i",#remove gaps from axes
      axes=FALSE)#no axes
-polygon(c(aveF$doy, rev(aveF$doy)),#x coordinates
-        c(aveF$dailyAve-sdF$dailySD,rev(aveF$dailyAve+sdF$dailySD)),#ycoord
-        col=rgb(0.392, 0.584, 0.929,.2), #color that is semi-transparent
-        border=NA#no border
-)       
-
-
-#Q7
-points(aveF$dailyAve[aveF$doy == agg$Group.1])
-
-
-
-axis(1, seq(0,360, by=40), #tick intervals
-     lab=seq(0,360, by=40)) #tick labels
-axis(2, seq(0,80, by=20),
-     seq(0,80, by=20),
+full24$decYear <- ifelse(leap_year(full24$Group.2),full24$Group.2 + ((full24$Group.1-1)/366),
+                         full24$Group.2 + ((full24$Group.1-1)/365))
+points(full24$decYear,
+       y = rep(410,length(full24$decYear)),
+       type = "p",
+       pch=3,
+       col="blue",
+       cex=0.5
+)
+axis(1, seq(2007,2019, by=1), #tick intervals
+     lab=seq(2007,2019, by=1)) #tick labels
+axis(2, seq(0,500, by=50),
+     seq(0,500, by=50),
      las = 2)#show ticks at 90 degree angle
-legend("topright", c("mean","1 standard deviation"), #legend items
+legend(2016,410, c("Discharge","Days with 24 Observations"), #legend items
        lwd=c(2,NA),#lines
-       col=c("black",rgb(0.392, 0.584, 0.929,.2)),#colors
-       pch=c(NA,15),#symbols
+       col=c("black","blue"),#colors
+       pch=c(NA,3),#symbols
        bty="n")#no legend border
+
+## making a hydrograph
+# use September 5 and 6 in 2011
+# subset precipitation and discharge dataframes to be limited to this period
+# subsest discharge and precipitation within range of interest
+hydroD <- datD[datD$doy >= 248 & datD$doy < 250 & datD$year == 2011,]
+hydroP <- datP[datP$doy >= 248 & datP$doy < 250 & datP$year == 2011,]
+
+# look at min discharge value to use for y-axis min
+min(hydroD$discharge)
+
+# since there are periods with no precipitation, adjust the scaling of precipitation values...
+# ...to account for a y minimum value not at zero
+# create 'pscale' variable  to account for these issues
+# get minimum and maximum range of discharge to plot
+# go outside of the range so that it's easy to see high/low values
+# floor rounds down the integer
+yl <- floor(min(hydroD$discharge))-1
+# celing rounds up to the integer
+yh <- ceiling(max(hydroD$discharge))+1
+# minimum and maximum range of precipitation to plot
+pl <- 0
+pm <-  ceiling(max(hydroP$HPCP))+.5
+# scale precipitation to fit  
+hydroP$pscale <- (((yh-yl)/(pm-pl)) * hydroP$HPCP) + yl
+
+# now create plot using variabels set up in the scaling code above
+par(mai=c(1,1,1,1))
+# make plot of discharge
+plot(hydroD$decDay,
+     hydroD$discharge, 
+     type="l", 
+     ylim=c(yl,yh), 
+     lwd=2,
+     xlab="Day of year", 
+     ylab=expression(paste("Discharge ft"^"3 ","sec"^"-1")))
+#add bars to indicate precipitation 
+for(i in 1:nrow(hydroP)){
+  polygon(c(hydroP$decDay[i]-0.017,hydroP$decDay[i]-0.017,
+            hydroP$decDay[i]+0.017,hydroP$decDay[i]+0.017),
+          c(yl,hydroP$pscale[i],hydroP$pscale[i],yl),
+          col=rgb(0.392, 0.584, 0.929,.2), border=NA)
+}
+
+
+###### Question 8 ######
+
+hydroD2 <- datD[datD$doy >= 362 & datD$doy < 364 & datD$year == 2012,]
+hydroP2 <- datP[datP$doy >= 362 & datP$doy < 364 & datP$year == 2012,]
+
+# look at min discharge value to use for y-axis min
+min(hydroD2$discharge)
+
+# since there are periods with no precipitation, adjust the scaling of precipitation values...
+# ...to account for a y minimum value not at zero
+# create 'pscale' variable  to account for these issues
+# get minimum and maximum range of discharge to plot
+# go outside of the range so that it's easy to see high/low values
+# floor rounds down the integer
+D2min <- floor(min(hydroD2$discharge))-1
+# celing rounds up to the integer
+D2max <- ceiling(max(hydroD2$discharge))+1
+# minimum and maximum range of precipitation to plot
+Pmin <- 0
+Pmax <- ceiling(max(hydroP2$HPCP))+.5
+# scale precipitation to fit on the 
+hydroP2$pscale <- (((D2max-D2min)/(Pmax-Pmin)) * hydroP2$HPCP) + D2min
+
+# now create plot using variabels set up in the scaling code above
+par(mai=c(1,1,1,1))
+# make plot of discharge
+plot(hydroD2$decDay,
+     hydroD2$discharge, 
+     type="l", 
+     ylim=c(D2min,D2max), 
+     lwd=2,
+     xlab="Day of year", 
+     ylab=expression(paste("Discharge ft"^"3 ","sec"^"-1")))
+# add bars to indicate precipitation 
+for(i in 1:nrow(hydroP2)){
+  polygon(c(hydroP2$decDay[i]-0.017,hydroP2$decDay[i]-0.017,
+            hydroP2$decDay[i]+0.017,hydroP2$decDay[i]+0.017),
+          c(D2min,hydroP2$pscale[i],hydroP2$pscale[i],D2min),
+          col=rgb(0.392, 0.584, 0.929,.2), border=NA)
+}
+
+
+## Box plots and Violin plots
+# use ggplot2 to make the plots
+library(ggplot2)
+# specify year as a factor
+datD$yearPlot <- as.factor(datD$year)
+# make a boxplot
+ggplot(data= datD, aes(yearPlot,discharge)) + 
+  geom_boxplot()
+# make a violin plot
+ggplot(data= datD, aes(yearPlot,discharge)) + 
+  geom_violin()
+
+###### Question 9 ######
+
+# make a violin plot of streamflow by season for 2016 and 2017
+# start of spring = March 20 - doy = 80,79
+# summer = June 20 - doy = 172,171
+# fall = Sept 22 - doy = 266,265
+# winter = dec 21 - doy = 356,355
+
+datD16 <- datD[datD$year == "2016",]
+datD17 <- datD[datD$year == "2017",]
+
+# create a function to label 2016 seasons based on doy
+datD16function <- function(doy){
+  if(doy<80 | doy>=355){
+    season<-"winter"}
+  else if(doy>=80 & doy<172){
+    season<-"spring"}
+  else if(doy>=172 & doy<266){
+    season<-"summer"}
+  else{season<-"fall"}
+  return(season)
+}
+
+# apply season function to the datD16 doy to label days as their respective season
+datD16$season <- lapply(datD16$doy, datD16function)
+datD16$season <- unlist(datD16$season)
+datD16$season <- as.factor(datD16$season)
+is.factor(datD16$season)
+
+# make the 2016 season violin plot
+ggplot(datD16, aes(season,discharge)) +
+  geom_violin() + ggtitle("Discharge by Season (2016)")
+
+
+
+# create a function to label 2017 seasons based on doy
+datD17function <- function(doy){
+  if(doy<79 | doy>=354){
+    season<-"winter"}
+  else if(doy>=79 & doy<171){
+    season<-"spring"}
+  else if(doy>=171 & doy<265){
+    season<-"summer"}
+  else{season<-"fall"}
+  return(season)
+}
+
+# apply season function to the datD17 doy to label days as their respective season
+datD17$season <- lapply(datD17$doy, datD17function)
+datD17$season <- unlist(datD17$season)
+datD17$season <- as.factor(datD17$season)
+is.factor(datD17$season)
+
+# make the 2017 season violin plot
+ggplot(datD17, aes(season,discharge)) +
+  geom_violin() + ggtitle("Discharge by Season (2017)")
+
