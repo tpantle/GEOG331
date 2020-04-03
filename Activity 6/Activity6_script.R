@@ -113,7 +113,6 @@ plot(NDVIraster[[1]])
 
 ### QUESTION 3 ###
 # plot NDVI with glacier polygons
-par(mar=c(1,1,1,1))
 plot(NDVIraster[[1]])
 plot(g1966, col="tan3", border=NA, add=TRUE)
 plot(g1998, col="royalblue3", add=TRUE, border=NA)
@@ -173,12 +172,13 @@ for(i in 2:39){
 # calculate percentage change in area between 1966 and 2015
 1.00 - (sum(g2015p@data$Area2015))/(sum(g1966p@data$Area1966))
 # make an spplot of the glaciers in 2015, showing each glacier's % change
-change <- list()
+change <- numeric(0)
 for(i in 1:nrow(g2015p@data)){
-  change[[i]] <- (1.00 - ((g2015p@data$Area2015[i])/(g1966p@data$Area1966[i])))
+  change[i] <- (1.00 - ((g2015p@data$Area2015[i])/(g1966p@data$Area1966[i])))
 }
+
 g2015p@data$pct_change <- change
-spplot(g2015p@data$pct_change)
+spplot(g2015p,"pct_change")
 # I tried for hours to figure out spplot but I couldn’t make it work
 # I made a standard plot instead that shows 
 plot(c(1966,2015), 
@@ -202,7 +202,8 @@ for(i in 2:39){
 
 # plot diffPoly with NDVI
 plot(NDVIraster[[13]], axes=FALSE, box=FALSE)
-plot(diffPoly,col="black", border=NA,add=TRUE)
+# plot(diffPoly,col="black", border=NA,add=TRUE)
+# **no diffpoly bc gDiff didn't work
 
 ### QUESTION 6 ###
 # find the glacier with the largest % loss
@@ -220,17 +221,19 @@ plot(g2015@data$Area2015[g2015@data$GLACNAME=="Boulder Glacier"], col="tomato3",
 NDVIdiff <- list()
 meanDiff <- numeric(0)
 #loop through all NDVI years
-for(i in 1:length(ndviYear)){
+# for(i in 1:length(ndviYear)){
   #get raster values in the difference polygon
-  NDVIdiff[[i]] <- extract(NDVIraster[[i]],diffPoly)[[1]]
+  # NDVIdiff[[i]] <- extract(NDVIraster[[i]],diffPoly)[[1]]
   #calculate the mean of the NDVI values
-  meanDiff[i] <- mean(NDVIdiff[[i]], na.rm=TRUE)
-}
+  # meanDiff[i] <- mean(NDVIdiff[[i]], na.rm=TRUE)
+#}
+# **no diffPoly**
 
-plot(ndviYear, meanDiff, type="b",
-     xlab= "Year",
-     ylab="Average NDVI (unitless)",
-     pch=19)
+#plot(ndviYear, meanDiff, type="b",
+#     xlab= "Year",
+#     ylab="Average NDVI (unitless)",
+#     pch=19)
+# **no diffPoly
 
 # designate that NDVIraster list is a stack
 NDVIstack <- stack(NDVIraster)
@@ -289,5 +292,11 @@ plot(g2015p)
 ### QUESTION 11 ###
 g2015p@data$NDVIcol <- ifelse(g2015p@data$NDVImean<0.4,"blue","red")
 plot(g2015p, add=TRUE, col=paste(g2015p@data$NDVIcol),border=FALSE)
+
+max_list <- list()
+for(i in 1:nrow(NDVIstack@layers)){
+  max_list[[i]] <- mean(NDVIstack@layers[[i]]@data@max)
+}
+
 
 
